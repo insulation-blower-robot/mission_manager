@@ -1,0 +1,11 @@
+string current_state
+string status_string
+int16 exploration_progress
+bool start_confirmed
+bool exploration_confirmed
+bool exploration_estop
+string current_target
+bool target_confirmed
+bool start_filling_confirmed
+bool target_filled_confirmed
+bool manual_override_requested

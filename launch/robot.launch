@@ -1,0 +1,3 @@
+<launch>
+    <node name="robot_manager" pkg="robot_manager" type="state_machine.py" output="screen"/>
+</launch>

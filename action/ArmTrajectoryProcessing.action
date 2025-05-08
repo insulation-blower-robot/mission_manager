@@ -1,0 +1,12 @@
+# Goal
+string action                    #"TrackOrientation" for arm controller
+string frame_id                  # used for arm controller
+float32 frame_angle              # used for arm controller
+
+---
+# Result
+bool success
+
+---
+# Feedback
+string status

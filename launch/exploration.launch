@@ -1,0 +1,4 @@
+<launch>
+    <machine name="detection" address="192.168.2.136" user="pi" />
+    <node name="observation_map_node" pkg="attic_exploration" type="observation_map_node" machine="detection" />
+</launch>

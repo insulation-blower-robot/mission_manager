@@ -1,0 +1,5 @@
+<launch>
+  <machine name="chris" address="chris-desktop" user="chris" />
+  <machine name="henry" address="henry" user="pi" />
+  <machine name="youbot" address="youbot" user="root" />
+</launch>

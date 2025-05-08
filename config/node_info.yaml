@@ -1,0 +1,80 @@
+gui:
+
+  # - name: smach
+  #   launch_command: rosrun robot_manager state_machine.py
+  #   method: roslaunch
+  #   ssh_host: chris-desktop
+  #   ssh_user: chris
+
+init:
+  - name: cavity_server
+    launch_command: in_env roslaunch cavity_detection cavity_server.launch
+    method: tmux
+    ssh_host: henry
+    ssh_user: pi
+    local: False
+    
+  - name: youbot_driver
+    launch_command: in_env roslaunch youbot_driver_ros_interface youbot_driver.launch
+    method: tmux
+    ssh_host: youbot
+    ssh_user: root
+    local: False
+
+  - name: xtion_driver
+    launch_command: in_env roslaunch openni2_launch openni2.launch
+    method: tmux
+    ssh_host: youbot
+    ssh_user: root
+    local: False
+
+  - name: move_base
+    launch_command: in_env roslaunch youbot_navigation_stack move_base.launch
+    method: tmux
+    ssh_host: chris-desktop
+    ssh_user: chris
+    local: True
+
+  # - name: base_action_server
+  #   launch_command: in_env roslaunch youbot_local_trajectory_planner local_trajectory_planner.launch
+  #   method: tmux
+  #   ssh_host: chris-desktop
+  #   ssh_user: chris
+  #   local: True
+
+  # - name: arm_action_server
+  #   launch_command: in_env roslaunch youbot_arm_moveit_config arm_trajectory_planner.launch
+  #   method: tmux
+  #   ssh_host: chris-desktop
+  #   ssh_user: chris
+  #   local: True
+
+exploring:
+  - name: detectors
+    launch_command: in_env roslaunch cavity_detection detectors.launch
+    method: tmux
+    ssh_host: henry
+    ssh_user: pi
+    local: False
+
+  # - name: exploration
+  #   launch_command: in_env robot_manager exploration.launch
+  #   method: tmux
+  #   ssh_host: henry
+  #   ssh_user: pi
+  #   local: False
+
+# filling:
+#   - name: elevation_mapping
+#     launch_command: in_env roslaunch elevation_mapping elevation_mapping.launch
+#     method: tmux    
+#     ssh_host: chris-desktop
+#     ssh_user: chris
+#     local: True
+
+#   - name: insul_monit
+#     launch_command: in_env roslaunch insul_monit insul_monit.launch
+#     method: tmux
+#     ssh_host: chris-desktop
+#     ssh_user: chris
+#     local: True

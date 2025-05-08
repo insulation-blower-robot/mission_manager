@@ -1,0 +1,10 @@
+#goal definition
+cavity_detection_msgs/Roi roi
+string trajectory_type #"smooth" or "stop_and_go"
+
+---
+#result definition
+bool success
+---
+#feedback
+float32 progress
