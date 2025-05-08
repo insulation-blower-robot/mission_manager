@@ -1,4 +1,0 @@
-<launch>  
-    <machine name="detection" address="192.168.2.136" user="pi" />
-    <node name="cavity_server" pkg="cavity_detection" type="cavity_server.py" machine="detection" />
-</launch>

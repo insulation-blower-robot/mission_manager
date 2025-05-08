@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>robot_manager</name>
+  <name>mission_manager</name>
   <version>0.0.0</version>
   <description>Example SMACH task manager with RQT control</description>
   <maintainer email="user@todo.todo">user</maintainer>

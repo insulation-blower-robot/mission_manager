@@ -1,3 +1,3 @@
 <launch>
-    <node name="robot_manager" pkg="robot_manager" type="state_machine.py" output="screen"/>
+    <node name="mission_manager" pkg="mission_manager" type="state_machine.py" output="screen"/>
 </launch>
