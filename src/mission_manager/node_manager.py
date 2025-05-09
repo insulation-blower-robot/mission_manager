@@ -1,14 +1,14 @@
 import yaml
 import rospy
 import rospkg
-from robot_manager.node_wrapper import TmuxNode, RoslaunchNode
+from mission_manager.node_wrapper import TmuxNode, RoslaunchNode
 
 class NodeManager:
     def __init__(self, name):
         self.name = name
         self.nodes = {}
         rospack = rospkg.RosPack()
-        pkg_path = rospack.get_path('robot_manager')
+        pkg_path = rospack.get_path('mission_manager')
         self.load_nodes_from_config(f"{pkg_path}/config/node_info.yaml")
         self.fake = False
 

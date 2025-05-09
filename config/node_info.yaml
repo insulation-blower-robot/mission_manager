@@ -50,6 +50,13 @@ init:
   #   local: True
 
 exploring:
+  - name: map_tracker
+    launch_command: in_env roslaunch cavity_detection map_tracker.launch
+    method: tmux
+    ssh_host: henry
+    ssh_user: pi
+    local: False
+
   - name: detectors
     launch_command: in_env roslaunch cavity_detection detectors.launch
     method: tmux

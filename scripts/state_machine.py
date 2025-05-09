@@ -23,11 +23,10 @@ class SMContext:
         self.start_confirmed = False
         self.exploration_confirmed = False
         self.exploration_estop = False
-        self.target_confirmed = {}
-        self.start_filling_confirmed = {}
-        self.target_filled_confirmed = {}
+        self.target_confirmed = False
+        self.start_filling_confirmed = False
+        self.target_filled_confirmed = False
         self.manual_override_requested = False
-        self.running = {}
         self.node_manager = None
         self.exporation_manager = None
         self.filling_manager = None
@@ -37,11 +36,10 @@ class SMContext:
         self.context_pub = rospy.Publisher('/smach_context', Context, queue_size=10)
 
     def add_target(self, target_id):
-        if target_id not in self.target_confirmed:
-            self.target_confirmed[target_id] = False
-            self.start_filling_confirmed[target_id] = False
-            self.target_filled_confirmed[target_id] = False
         self.current_target = target_id
+        self.target_confirmed = False
+        self.start_filling_confirmed = False
+        self.target_filled_confirmed = False
 
     def publish_context(self, event):        
         # Publish the context message
@@ -53,11 +51,13 @@ class SMContext:
         context_msg.start_confirmed = self.start_confirmed                                                                                      # bool start_confirmed                                                                        
         context_msg.exploration_confirmed = self.exploration_confirmed                                                                       # bool exploration_confirmed
         context_msg.exploration_estop = self.exploration_estop                                                                              # bool exploration_estop
-        context_msg.target_confirmed = False if self.current_target is None else self.target_confirmed[self.current_target]                # bool target_confirmed
-        context_msg.start_filling_confirmed = False if self.current_target is None else self.start_filling_confirmed[self.current_target]         # bool start_filling_confirmed
-        context_msg.target_filled_confirmed = False if self.current_target is None else self.target_filled_confirmed[self.current_target]         # bool target_filled_confirmed
+        context_msg.target_confirmed = self.target_confirmed
+        context_msg.start_filling_confirmed = self.start_filling_confirmed
+        context_msg.target_filled_confirmed = self.start_filling_confirmed
         context_msg.manual_override_requested = self.manual_override_requested                                                                      # bool manual_override_requested
         self.context_pub.publish(context_msg)
+    
+
 
     def handle_trigger(self, req):
         if req.button == "START EXPLORING":
@@ -80,13 +80,15 @@ class SMContext:
                 rospy.loginfo("Robot is done exploring.")
                 self.exploration_confirmed = True
                 return TriggerResponse(success=True, message="Robot is done exploring.")
+        elif req.target != self.current_target:
+                return TriggerResponse(success=False, message="Target mismatch! Not proceeding.")
         elif req.button == "CONFIRM TARGET":
             if self.current_state != "WAITING_FOR_TARGET":
                 rospy.loginfo("State machine is not in WAITING_FOR_TARGET state.")
                 return TriggerResponse(success=False, message="State machine is not in WAITING_FOR_TARGET state.")
             else:
                 rospy.loginfo("Target confirmed.")
-                self.target_confirmed = req.target
+                self.target_confirmed = True
                 return TriggerResponse(success=True, message="Target confirmed.")
         elif req.button == "CONFIRM BLOWING":
             if self.current_state != "FILLING_TARGET":
@@ -94,7 +96,7 @@ class SMContext:
                 return TriggerResponse(success=False, message="State machine is not in FILLING_TARGET state.")
             else:
                 rospy.loginfo("Filling operation started.")
-                self.start_filling_confirmed = req.target
+                self.start_filling_confirmed = True
                 return TriggerResponse(success=True, message="Filling operation started.")
         elif req.button == "CONFIRM FILLED":
             if self.current_state != "FILLING_TARGET":
@@ -102,7 +104,7 @@ class SMContext:
                 return TriggerResponse(success=False, message="State machine is not in FILLING_TARGET state.")
             else:
                 rospy.loginfo("Filling operation completed.")
-                self.target_filled_confirmed = req.target
+                self.target_filled_confirmed = True
                 return TriggerResponse(success=True, message="Filling operation completed.")
         elif req.button == "CONFIRM MANUAL OVERRIDE":
                 rospy.loginfo("Manual override requested.")
@@ -178,7 +180,6 @@ class Exploring(SMState):
             return 'manual_override'
         
         if not self.context.start_confirmed:
-            rospy.loginfo("Waiting for confirmation to start exploration.")
             # Wait for confirmation to start exploration
             if self.context.status_string != "Waiting for confirmation to start exploration.":
                 self.context.status_string = "Waiting for confirmation to start exploration."
@@ -215,7 +216,6 @@ class WaitingForTarget(SMState):
         self.target_details = None
         self.name = "WAITING"
 
-
     def execute(self, userdata):
         self.on_enter()
         if self.preempt_requested():
@@ -229,11 +229,10 @@ class WaitingForTarget(SMState):
                 rospy.loginfo("No targets found.")
                 return 'no_targets'
             else:
-                self.target_details = target_details
-                userdata.target_details = self.target_details
-                self.context.add_target(self.target_details.id)
+                userdata.target_details = target_details
+                self.context.add_target(target_details.id)
                 rospy.loginfo(f"Target found: {self.target_details}")
-        if self.context.target_confirmed[self.target_details.id]:
+        if self.context.target_confirmed:
             rospy.loginfo(f"Target confirmed: {self.target_details}")
             return self.exit_to('MOVING')
         else:
