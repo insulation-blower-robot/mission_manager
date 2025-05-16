@@ -5,12 +5,12 @@ import smach
 import smach_ros
 from std_srvs.srv import Trigger, TriggerResponse # Example for checking status externally
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from cavity_detection_api.api import get_nearest_cavity
+from cavity_detection_api.api import *
 from cavity_detection_msgs.msg import Roi
-from robot_manager.srv import Trigger, TriggerResponse
-from robot_manager.msg import Context
-from robot_manager.node_manager import NodeManager
-from robot_manager.filling_manager import FillingManager
+from mission_manager.srv import Trigger, TriggerResponse
+from mission_manager.msg import Context
+from mission_manager.node_manager import NodeManager
+from mission_manager.filling_manager import FillingManager
 
 
 class SMContext:
@@ -224,7 +224,7 @@ class WaitingForTarget(SMState):
             return 'manual_override'
         if not self.target_details:
             rospy.loginfo('Finding next target...')
-            target_details = get_nearest_cavity()
+            target_details = get_nearest_roi()
             if target_details is None:
                 rospy.loginfo("No targets found.")
                 return 'no_targets'

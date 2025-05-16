@@ -1,9 +1,9 @@
 import rospy
 import actionlib
 from cavity_detection_msgs.msg import Roi
-from robot_manager.msg import BaseTrajectoryProcessingAction, BaseTrajectoryProcessingGoal
-from robot_manager.msg import ArmTrajectoryProcessingAction, ArmTrajectoryProcessingGoal
-from robot_manager.node_manager import NodeManager
+from mission_manager.msg import BaseTrajectoryProcessingAction, BaseTrajectoryProcessingGoal
+from mission_manager.msg import ArmTrajectoryProcessingAction, ArmTrajectoryProcessingGoal
+from mission_manager.node_manager import NodeManager
 from actionlib_msgs.msg import GoalStatus
 
 class FillingManager:

@@ -3,9 +3,9 @@ import subprocess
 import actionlib
 import roslaunch
 from sensor_msgs.msg import RegionOfInterest
-from my_package.msg import TrajectoryGoalAction, TrajectoryGoalGoal
-from my_package.msg import ArmControlAction, ArmControlGoal
-from robot_manager.node_manager import NodeManager
+from mission_manager.msg import TrajectoryGoalAction, TrajectoryGoalGoal
+from mission_manager.msg import ArmControlAction, ArmControlGoal
+from mission_manager.node_manager import NodeManager
 
 class ExploringManager:
     def __init__(self):

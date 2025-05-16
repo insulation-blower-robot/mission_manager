@@ -10,7 +10,7 @@ class NodeManager:
         rospack = rospkg.RosPack()
         pkg_path = rospack.get_path('mission_manager')
         self.load_nodes_from_config(f"{pkg_path}/config/node_info.yaml")
-        self.fake = False
+        self.fake = True
 
     def add_node(self, node: TmuxNode):
         self.nodes[node.node_name] = node
