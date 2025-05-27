@@ -40,6 +40,12 @@ class SMContext:
         self.target_confirmed = False
         self.start_filling_confirmed = False
         self.target_filled_confirmed = False
+    
+    def drop_target(self):
+        self.current_target = None
+        self.target_confirmed = False
+        self.start_filling_confirmed = False
+        self.target_filled_confirmed = False
 
     def publish_context(self, event):        
         # Publish the context message
@@ -57,10 +63,25 @@ class SMContext:
         context_msg.manual_override_requested = self.manual_override_requested                                                                      # bool manual_override_requested
         self.context_pub.publish(context_msg)
     
+    def die_gracefully(self):
+        # Cleanup all nodes
+        rospy.loginfo("State machine shutting down.")
+        if self.exploration_manager is not None:
+            self.exploration_manager.kill_all()
+            rospy.loginfo("Exploration manager stopped.")
+        if self.filling_manager is not None:
+            self.filling_manager.stop()
+            rospy.loginfo("Filling manager stopped.")
+        if self.node_manager is not None:
+            self.node_manager.kill_all()      
+            rospy.loginfo("Node manager killed all nodes.")
 
-
-    def handle_trigger(self, req):
-        if req.button == "START EXPLORING":
+    def handle_trigger(self, req):        
+        if req.button == "MANUAL STOP":
+                rospy.loginfo("Manual override requested.")
+                self.manual_override_requested = True
+                return TriggerResponse(success=True, message="Manual override requested.")
+        elif req.button == "START EXPLORING":
             if self.current_state != "EXPLORING":
                 rospy.loginfo("State machine is not in EXPLORING state.")
                 return TriggerResponse(success=False, message="State machine is not in EXPLORING state.")
@@ -83,7 +104,7 @@ class SMContext:
         elif req.target != self.current_target:
                 return TriggerResponse(success=False, message="Target mismatch! Not proceeding.")
         elif req.button == "CONFIRM TARGET":
-            if self.current_state != "WAITING_FOR_TARGET":
+            if self.current_state != "WAITING":
                 rospy.loginfo("State machine is not in WAITING_FOR_TARGET state.")
                 return TriggerResponse(success=False, message="State machine is not in WAITING_FOR_TARGET state.")
             else:
@@ -99,17 +120,13 @@ class SMContext:
                 self.start_filling_confirmed = True
                 return TriggerResponse(success=True, message="Filling operation started.")
         elif req.button == "CONFIRM FILLED":
-            if self.current_state != "FILLING_TARGET":
+            if self.current_state != "FILLING":
                 rospy.loginfo("State machine is not in FILLING_TARGET state.")
                 return TriggerResponse(success=False, message="State machine is not in FILLING_TARGET state.")
             else:
                 rospy.loginfo("Filling operation completed.")
                 self.target_filled_confirmed = True
                 return TriggerResponse(success=True, message="Filling operation completed.")
-        elif req.button == "CONFIRM MANUAL OVERRIDE":
-                rospy.loginfo("Manual override requested.")
-                self.manual_override_requested = True
-                return TriggerResponse(success=True, message="Manual override requested.")
 
 
 class SMState(smach.State):
@@ -118,17 +135,25 @@ class SMState(smach.State):
         self.context = context
         self.name = "STATE"
 
+
     def execute(self, userdata):
-        # Update the current state in the context
-        self.on_enter()
-        return self.exit_to(self.name)
-    
-    def on_enter(self):
         # Called when entering the state
         if self.context.current_state != self.name:
             rospy.loginfo(f"Entering state: {self.name}")
             self.context.last_state = self.context.current_state
             self.context.current_state = self.name
+
+        if self.context.manual_override_requested:
+            rospy.loginfo("Preemption requested!")
+            self.context.die_gracefully()
+            self.service_preempt()
+            return 'manual_override'
+        
+        return self.run(userdata)
+        
+    def run(self, userdata):
+        # Update the current state in the context
+        raise NotImplementedError("Subclasses must implement run()")
     
     def exit_to(self, next_state):
         # Called when exiting the state
@@ -150,7 +175,7 @@ class Startup(SMState):
         self.started = False
         self.name = "STARTUP"
 
-    def execute(self, userdata):
+    def run(self, userdata):
         if not self.started:
             self.context.node_manager.start_all()
             rospy.loginfo("All nodes started.")
@@ -169,16 +194,8 @@ class Exploring(SMState):
         self.progress = 0
         self.name = "EXPLORING"
 
+    def run(self, userdata):
 
-    def execute(self, userdata):
-        self.on_enter()
-        if self.preempt_requested():
-            rospy.loginfo("Preemption requested!")
-            if self.started:
-                self.node_manager.kill_all()
-            self.service_preempt()
-            return 'manual_override'
-        
         if not self.context.start_confirmed:
             # Wait for confirmation to start exploration
             if self.context.status_string != "Waiting for confirmation to start exploration.":
@@ -213,27 +230,25 @@ class WaitingForTarget(SMState):
                              outcomes=['WAITING', 'MOVING','no_targets', 'manual_override'],
                              output_keys=['target_details'])
         self.context = context
-        self.target_details = None
         self.name = "WAITING"
 
-    def execute(self, userdata):
-        self.on_enter()
-        if self.preempt_requested():
-            rospy.loginfo("Preemption requested!")
-            self.service_preempt()
-            return 'manual_override'
-        if not self.target_details:
+    def run(self, userdata):
+
+        if self.context.current_target is None:
             rospy.loginfo('Finding next target...')
             target_details = get_nearest_roi()
+            self.context.current_target = target_details.id
             if target_details is None:
                 rospy.loginfo("No targets found.")
                 return 'no_targets'
             else:
                 userdata.target_details = target_details
                 self.context.add_target(target_details.id)
-                rospy.loginfo(f"Target found: {self.target_details}")
+                rospy.loginfo(f"Target found: {target_details}")
         if self.context.target_confirmed:
-            rospy.loginfo(f"Target confirmed: {self.target_details}")
+            target_id = self.context.current_target
+            target_details = get_roi_by_id(target_id)
+            rospy.loginfo(f"Target confirmed: {target_details}")
             return self.exit_to('MOVING')
         else:
             return self.stay()
@@ -248,13 +263,7 @@ class FillingTarget(SMState):
         self.done = False
         self.name = "FILLING"
 
-    def execute(self, userdata):
-        self.on_enter()
-
-        if self.preempt_requested():
-            rospy.loginfo("Preemption requested!")
-            self.service_preempt()
-            return 'manual_override'
+    def run(self, userdata):
 
         if not self.context.start_filling_confirmed:
             rospy.loginfo("Waiting for confirmation to start filling.")
